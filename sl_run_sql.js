@@ -4,21 +4,16 @@
  */
 define(['N/query', 'N/ui/serverWidget', 'N/log'], function(query, serverWidget, log) {
 	function runQuery(sql) {
-		var result = query.runSuiteQLPaged({ query: sql, pageSize: 1000 }).iterator();
+		var result = query.runSuiteQL({ query: sql });
 		
-		/*log.debug('ok got', result.asMappedResults()); // <-- this works unpaged
-		log.debug('ok cols', result.columns);
-		log.debug('result', result);*/
+		var response = { columns: [], rows: [] };
+		for (var i = 0; i < result.results.length; i++) {
+			if (response.columns.length == 0) {
+				response.columns = Object.keys(result.results[i].asMap());
+			}
+			response.rows.push(result.results[i].values);
+		}
 		
-		var response = [];
-		result.each(function(page) {
-			var pageIterator = page.value.data.iterator();
-			pageIterator.each(function(row) {
-				response.push(row.value.values);
-				return true;
-			});
-			return true;
-		});
 		return response;
 	}
 	
@@ -40,7 +35,7 @@ define(['N/query', 'N/ui/serverWidget', 'N/log'], function(query, serverWidget, 
 				sql_field.defaultValue = context.request.parameters.custpage_sql_field;
 				var result = runQuery(context.request.parameters.custpage_sql_field);
 				
-				if (result.length > 0) {
+				if (result.rows.length > 0) {
 					// Output result
 					var result_list = form.addSublist({
 						id: 'sublist',
@@ -48,21 +43,21 @@ define(['N/query', 'N/ui/serverWidget', 'N/log'], function(query, serverWidget, 
 						label: 'SQL Results'
 					});
 					// Headers
-					for (var ii = 0; ii < result[0].length; ii++) {
+					for (var ii = 0; ii < result.columns.length; ii++) {
 						result_list.addField({
 							id: 'custpage_' + ii + '_field',
-							label: '_',
+							label: result.columns[ii],
 							type: serverWidget.FieldType.TEXT
 						});
 					}
 					// Data
 					var sublist = form.getSublist({ id: 'sublist' });
-					for (var row_num = 0; row_num < result.length; row_num++) {
-						for (var col_num = 0; col_num < result[row_num].length; col_num++) {
+					for (var row_num = 0; row_num < result.rows.length; row_num++) {
+						for (var col_num = 0; col_num < result.rows[row_num].length; col_num++) {
 							sublist.setSublistValue({
 								id: 'custpage_' + col_num + '_field',
 								line: row_num,
-								value: result[row_num][col_num]
+								value: result.rows[row_num][col_num]
 							});
 						}
 					}
