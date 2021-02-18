@@ -9,6 +9,7 @@ define(['N/query', 'N/ui/serverWidget', 'N/log'], function(query, serverWidget, 
 		var response = { columns: [], rows: [] };
 		for (var i = 0; i < result.results.length; i++) {
 			if (response.columns.length == 0) {
+				// Only way I could figure out how to get access to columns returned. Or via Query.asMappedResult()
 				response.columns = Object.keys(result.results[i].asMap());
 			}
 			response.rows.push(result.results[i].values);
