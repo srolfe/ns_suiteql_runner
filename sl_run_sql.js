@@ -1,15 +1,24 @@
 /**
+ * SuiteQL Query Executor
+ * Runs arbitrary SuiteQL queries in an interactable Suitelet
+ *
+ * @author Steve Rolfechild
  * @NScriptType Suitelet
  * @NApiVersion 2.x
  */
 define(['N/query', 'N/ui/serverWidget', 'N/log'], function(query, serverWidget, log) {
 	function runQuery(sql) {
-		var result = query.runSuiteQL({ query: sql });
+		var response = { columns: [], rows: [], error: undefined };
 		
-		var response = { columns: [], rows: [] };
+		try {
+			var result = query.runSuiteQL({ query: sql });
+		} catch (e) {
+			response.error = e.message;
+			return response;
+		}
+		
 		for (var i = 0; i < result.results.length; i++) {
 			if (response.columns.length == 0) {
-				// Only way I could figure out how to get access to columns returned. Or via Query.asMappedResult()
 				response.columns = Object.keys(result.results[i].asMap());
 			}
 			response.rows.push(result.results[i].values);
@@ -20,19 +29,20 @@ define(['N/query', 'N/ui/serverWidget', 'N/log'], function(query, serverWidget, 
 	
 	return {
 		onRequest: function(context) {
-			var form = serverWidget.createForm({ title: 'Run SQL' });
+			var form = serverWidget.createForm({ title: 'Run SuiteQL Query' });
 			
+			// SQL capture field
 			var sql_field = form.addField({
 				id: 'custpage_sql_field',
-				type: serverWidget.FieldType.LONGTEXT,
-				label: 'SQL'
+				type: serverWidget.FieldType.TEXTAREA,
+				label: 'Query'
 			});
-			sql_field.layoutType = serverWidget.FieldLayoutType.NORMAL;
 			sql_field.updateBreakType({ breakType: serverWidget.FieldBreakType.STARTCOL });
-			sql_field.updateDisplaySize({ height: 25, width: 150 });
+			sql_field.updateDisplaySize({ height: 15, width: 150 });
 			
 			if (context.request.method === 'POST'){
-				log.debug('should run query', context.request.parameters.custpage_sql_field);
+				// Log and run query
+				log.debug('Query', context.request.parameters.custpage_sql_field);
 				sql_field.defaultValue = context.request.parameters.custpage_sql_field;
 				var result = runQuery(context.request.parameters.custpage_sql_field);
 				
@@ -41,16 +51,18 @@ define(['N/query', 'N/ui/serverWidget', 'N/log'], function(query, serverWidget, 
 					var result_list = form.addSublist({
 						id: 'sublist',
 						type: serverWidget.SublistType.LIST,
-						label: 'SQL Results'
+						label: 'Results'
 					});
+					
 					// Headers
 					for (var ii = 0; ii < result.columns.length; ii++) {
 						result_list.addField({
 							id: 'custpage_' + ii + '_field',
 							label: result.columns[ii],
-							type: serverWidget.FieldType.TEXT
+							type: serverWidget.FieldType.TEXTAREA
 						});
 					}
+					
 					// Data
 					var sublist = form.getSublist({ id: 'sublist' });
 					for (var row_num = 0; row_num < result.rows.length; row_num++) {
@@ -62,12 +74,28 @@ define(['N/query', 'N/ui/serverWidget', 'N/log'], function(query, serverWidget, 
 							});
 						}
 					}
+				} else {
+					// Show error
+					var error_message;
+					if (result.error == undefined) {
+						error_message = '<div style="font-size:20pt; margin-top:50px;">0 results found</div>';
+					} else {
+						error_message = '<div style="font-size:14pt; color: red;">' + result.error + '</div>';
+					}
+					
+					form.addField({
+						id: 'custpage_error_field',
+						type: serverWidget.FieldType.INLINEHTML,
+						label: ' '
+					}).updateBreakType({
+						breakType: serverWidget.FieldBreakType.STARTROW
+					}).defaultValue = error_message;
 				}
 			} else {
-				sql_field.defaultValue = "SELECT * FROM paymentEvent";
+				sql_field.default_value = "SELECT TO_CHAR(SYSDATE, 'MM-DD-YYYY HH24:MI:SS')"
 			}
 			
-			form.addSubmitButton({ label: 'Run SQL' });
+			form.addSubmitButton({ label: 'Run Query' });
 			
 			context.response.writePage(form);
 		}
