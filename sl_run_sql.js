@@ -63,7 +63,7 @@ define(['N/query', 'N/ui/serverWidget', 'N/log'], function(query, serverWidget, 
 					}
 				}
 			} else {
-				sql_field.defaultValue = "SELECT * FROM paymentEvent WHERE pnrefnum = '17eaa60026d23f27a55203e0d5545a6f'";
+				sql_field.defaultValue = "SELECT * FROM paymentEvent";
 			}
 			
 			form.addSubmitButton({ label: 'Run SQL' });
