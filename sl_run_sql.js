@@ -7,8 +7,9 @@
  * @NApiVersion 2.x
  */
 define(['N/query', 'N/ui/serverWidget', 'N/log'], function(query, serverWidget, log) {
-	function runQuery(sql) {
+	function runQuery(sql, limitRows) {
 		var response = { columns: [], rows: [], error: undefined };
+		if (limitRows != undefined && limitRows > 0) sql = 'SELECT * FROM (' + sql + ') WHERE ROWNUM <= ' + limitRows;
 		
 		try {
 			var result = query.runSuiteQL({ query: sql });
@@ -40,11 +41,18 @@ define(['N/query', 'N/ui/serverWidget', 'N/log'], function(query, serverWidget, 
 			sql_field.updateBreakType({ breakType: serverWidget.FieldBreakType.STARTCOL });
 			sql_field.updateDisplaySize({ height: 15, width: 150 });
 			
+			var limit_rows = form.addField({
+				id: 'custpage_limit_field',
+				type: serverWidget.FieldType.INTEGER,
+				label: 'Limit Rows'
+			});
+			
 			if (context.request.method === 'POST'){
 				// Log and run query
 				log.debug('Query', context.request.parameters.custpage_sql_field);
 				sql_field.defaultValue = context.request.parameters.custpage_sql_field;
-				var result = runQuery(context.request.parameters.custpage_sql_field);
+				limit_rows.defaultValue = context.request.parameters.custpage_limit_field;
+				var result = runQuery(context.request.parameters.custpage_sql_field, context.request.parameters.custpage_limit_field);
 				
 				if (result.rows.length > 0) {
 					// Output result
@@ -67,10 +75,12 @@ define(['N/query', 'N/ui/serverWidget', 'N/log'], function(query, serverWidget, 
 					var sublist = form.getSublist({ id: 'sublist' });
 					for (var row_num = 0; row_num < result.rows.length; row_num++) {
 						for (var col_num = 0; col_num < result.rows[row_num].length; col_num++) {
+							var row_col_value = result.rows[row_num][col_num];
+							if (row_col_value != null && row_col_value.length > 4000) row_col_value = row_col_value.substr(0, 3996) + '...';
 							sublist.setSublistValue({
 								id: 'custpage_' + col_num + '_field',
 								line: row_num,
-								value: result.rows[row_num][col_num]
+								value: row_col_value
 							});
 						}
 					}
@@ -92,7 +102,8 @@ define(['N/query', 'N/ui/serverWidget', 'N/log'], function(query, serverWidget, 
 					}).defaultValue = error_message;
 				}
 			} else {
-				sql_field.default_value = "SELECT TO_CHAR(SYSDATE, 'MM-DD-YYYY HH24:MI:SS')"
+				sql_field.defaultValue = "SELECT * FROM transaction";
+				//limit_rows.defaultValue = 100;
 			}
 			
 			form.addSubmitButton({ label: 'Run Query' });
