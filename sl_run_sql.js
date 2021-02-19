@@ -10,7 +10,6 @@ define(['N/query', 'N/ui/serverWidget', 'N/log', 'N/file'], function(query, serv
 	/** Which folder ID should CSVs be saved in */
 	var file_folder = 5851640;
 	
-	
 	/**
 	 * Execute a query and return results
 	 */
@@ -46,14 +45,22 @@ define(['N/query', 'N/ui/serverWidget', 'N/log', 'N/file'], function(query, serv
 				id: 'custpage_sql_field',
 				type: serverWidget.FieldType.TEXTAREA,
 				label: 'Query'
+			}).updateBreakType({
+				breakType: serverWidget.FieldBreakType.STARTCOL
+			}).updateDisplaySize({
+				height: 15,
+				width: 150
 			});
-			sql_field.updateBreakType({ breakType: serverWidget.FieldBreakType.STARTCOL });
-			sql_field.updateDisplaySize({ height: 15, width: 150 });
 			
+			// Limit result size
 			var limit_rows = form.addField({
 				id: 'custpage_limit_field',
 				type: serverWidget.FieldType.INTEGER,
 				label: 'Limit Rows'
+			}).updateBreakType({
+				breakType: serverWidget.FieldBreakType.STARTCOL
+			}).updateLayoutType({
+				layoutType: serverWidget.FieldLayoutType.STARTROW
 			});
 			
 			// Output selection
@@ -61,9 +68,17 @@ define(['N/query', 'N/ui/serverWidget', 'N/log', 'N/file'], function(query, serv
 				id: 'custpage_output_selector',
 				type: serverWidget.FieldType.SELECT,
 				label: 'Output Type'
+			}).updateLayoutType({
+				layoutType: serverWidget.FieldLayoutType.ENDROW
 			});
-			output_type.addSelectOption({ value: 'grid', text: 'Grid' });
-			output_type.addSelectOption({ value: 'csv', text: 'CSV' });
+			output_type.addSelectOption({
+				value: 'grid',
+				text: 'Grid'
+			});
+			output_type.addSelectOption({
+				value: 'csv',
+				text: 'CSV'
+			});
 			
 			if (context.request.method === 'POST'){
 				// Log and run query
@@ -121,6 +136,8 @@ define(['N/query', 'N/ui/serverWidget', 'N/log', 'N/file'], function(query, serv
 							id: 'custpage_csv_link',
 							type: serverWidget.FieldType.URL,
 							label: 'Download CSV'
+						}).updateLayoutType({
+							layoutType: serverWidget.FieldLayoutType.STARTROW
 						}).updateDisplayType({
 							displayType: serverWidget.FieldDisplayType.INLINE
 						}).defaultValue = file.load({ id: file_id }).url;
@@ -145,7 +162,7 @@ define(['N/query', 'N/ui/serverWidget', 'N/log', 'N/file'], function(query, serv
 				}
 			} else {
 				sql_field.defaultValue = "SELECT * FROM transaction";
-				//limit_rows.defaultValue = 100;
+				limit_rows.defaultValue = 100;
 			}
 			
 			form.addSubmitButton({ label: 'Run Query' });
